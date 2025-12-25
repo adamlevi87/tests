@@ -1,24 +1,40 @@
-name: Push Windows Image to ECR
+name: Push Windows Image to ECR (OIDC)
+
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Manual trigger
+
+# These permissions are mandatory for OIDC to work
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   build-and-push:
-    runs-on: windows-2022
+    runs-on: windows-2022 # CRITICAL: Native Windows build
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          # This pulls the Role ARN from your GitHub Secrets
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
+
       - name: Build and Push
         shell: powershell
         run: |
           $ECR_REGISTRY = "${{ steps.login-ecr.outputs.registry }}"
-          docker build -t $ECR_REGISTRY/entra-connector-test:latest .
-          docker push $ECR_REGISTRY/entra-connector-test:latest
+          $REPO_NAME = "entra-connector-test"
+          
+          # Create the Dockerfile dynamically if it's not already in your repo
+          "FROM mcr.microsoft.com/windows/servercore:ltsc2022`nENTRYPOINT [`"powershell`", `"-Command`", `"while(`$true) { Start-Sleep -Seconds 3600 }`"]" | Out-File Dockerfile -Encoding ascii
+          
+          # Build, Tag, and Push
+          docker build -t $ECR_REGISTRY/$REPO_NAME:latest .
+          docker push $ECR_REGISTRY/$REPO_NAME:latest
