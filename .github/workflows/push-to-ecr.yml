@@ -29,12 +29,8 @@ jobs:
       - name: Build and Push
         shell: powershell
         run: |
-          $ECR_REGISTRY = "${{ steps.login-ecr.outputs.registry }}"
-          $REPO_NAME = "entra-connector-test"
+          # Use the output directly from the login step
+          $REGISTRY = "${{ steps.login-ecr.outputs.registry }}"
           
-          # Create the Dockerfile dynamically if it's not already in your repo
-          "FROM mcr.microsoft.com/windows/servercore:ltsc2022`nENTRYPOINT [`"powershell`", `"-Command`", `"while(`$true) { Start-Sleep -Seconds 3600 }`"]" | Out-File Dockerfile -Encoding ascii
-          
-          # Build, Tag, and Push
-          docker build -t $ECR_REGISTRY/$REPO_NAME:latest .
-          docker push $ECR_REGISTRY/$REPO_NAME:latest
+          docker build -t $REGISTRY/entra-connector-test:latest .
+          docker push $REGISTRY/entra-connector-test:latest
